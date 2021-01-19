@@ -1,11 +1,15 @@
 {
   "include": ["src"],
   "compilerOptions": {
+    "declaration": true,
     "esModuleInterop": true,
     "lib": ["es2018"],
+    "module": "commonjs",
     "moduleResolution": "node",
     "noUnusedLocals": true,
+    "outDir": "dist",
+    "sourceMap": true,
     "strict": true,
-    "target": "esnext"
+    "target": "es2018"
   }
 }

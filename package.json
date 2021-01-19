@@ -1,30 +1,31 @@
 {
   "name": "vite-plugin-rehost",
-  "version": "0.0.0",
+  "version": "2.0.0",
   "description": "Self-hosted resources from index.html",
   "author": "Alec Larson",
   "license": "MIT",
   "repository": "alloc/vite-plugin-rehost",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/plugin.js",
   "files": [
     "src",
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
+    "build": "tsc -p .",
     "prepare": "yarn build"
   },
   "peerDependencies": {
     "vite": ">1"
   },
-  "dependencies": {},
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.5",
+    "magic-string": "^0.25.7",
+    "node-fetch": "^2.6.1"
+  },
   "devDependencies": {
     "@types/node": "^14.14.20",
-    "esbuild": "^0.8.0",
+    "@types/node-fetch": "^2.5.8",
     "prettier": "^2.0.5",
-    "rollup-plugin-dts": "^1.4.10",
-    "rollup-plugin-esbuild": "^2.4.2",
     "typescript": "^4.0.0",
     "vite": "latest"
   },

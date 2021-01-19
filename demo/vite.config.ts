@@ -3,10 +3,11 @@ import reactPlugin from '@vitejs/plugin-react-refresh'
 import type { UserConfig } from 'vite'
 
 const config: UserConfig = {
-  plugins: [
-    reactPlugin(),
-    rehost(),
-  ],
+  build: {
+    assetsDir: '.',
+    base: 'http://localhost:5001/',
+  },
+  plugins: [reactPlugin(), rehost()],
 }
 
 export default config
