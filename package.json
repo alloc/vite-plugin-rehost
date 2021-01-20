@@ -15,7 +15,7 @@
     "prepare": "yarn build"
   },
   "peerDependencies": {
-    "vite": ">1"
+    "vite": ">2.0.0-0"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.5",
