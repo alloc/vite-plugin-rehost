@@ -30,16 +30,19 @@ export default (): Plugin => {
           const file = toFilePath(url)
           el.attr('href', file)
 
-          const loading: Promise<void>[] = []
+          if (files[file] == null) {
+            files[file] = ''
 
-          let text = await fetchText(url)
-          text = replaceCssUrls(text, url => {
-            loading.push(fetchAsset(url, files))
-            return toFilePath(url)
-          })
+            const loading: Promise<void>[] = []
 
-          files[file] = text
-          await Promise.all(loading)
+            const text = await fetchText(url)
+            files[file] = replaceCssUrls(text, url => {
+              loading.push(fetchAsset(url, files))
+              return toFilePath(url)
+            })
+
+            await Promise.all(loading)
+          }
         }
         $('link[rel="stylesheet"]').each((_i, el) => {
           const url = $(el).attr('href')
@@ -49,15 +52,13 @@ export default (): Plugin => {
         })
 
         async function fetchScript(url: string, el: Element) {
-          const text = await fetchText(url)
-
-          // Generate the content hash ourselves, or else the index.html
-          // will reference a non-existent file.
-          let file = toFilePath(url)
-          // file = [file.slice(0, -3), revHash(text), 'js'].join('.')
-
-          files[file] = text
+          const file = toFilePath(url)
           el.attr('src', file)
+
+          if (files[file] == null) {
+            files[file] = ''
+            files[file] = await fetchText(url)
+          }
         }
         $('script[src]').each((_i, el) => {
           const url = $(el).attr('src')
