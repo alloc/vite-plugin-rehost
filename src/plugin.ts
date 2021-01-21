@@ -4,7 +4,10 @@ import cheerio from 'cheerio'
 import fetch from 'node-fetch'
 import { URL } from 'url'
 
+type Element = ReturnType<typeof cheerio>
+
 export default (): Plugin => {
+  const elems: { [id: string]: Element } = {}
   const files: FileCache = {}
   let isBuild: boolean
 
@@ -14,8 +17,44 @@ export default (): Plugin => {
     configResolved({ command }) {
       isBuild = command == 'build'
       if (isBuild) {
-        this.resolveId = id => (files[id] == null ? void 0 : id)
-        this.load = id => files[id]
+        const emitCache = new Map<string, string>()
+        this.resolveId = function (id, importer) {
+          const source = files[id]
+          if (source == null) {
+            return null
+          }
+          const el = elems[id]
+          if (
+            importer?.endsWith('.html') &&
+            /**
+             * These assets are bundled by Rollup.
+             * @see /vite/src/node/plugins/html.ts
+             */
+            (el.is('script[type="module"]') ||
+              (el.is('link') && isCSSRequest(el.attr('href')!)))
+          ) {
+            return id
+          }
+          /**
+           * The remaining assets are saved to the `outDir` in
+           * their own files.
+           */
+          let assetId = emitCache.get(id)
+          if (!assetId) {
+            assetId = this.emitFile({
+              type: 'asset',
+              name: id.slice(1),
+              source,
+            })
+            // Vite replaces __VITE_ASSET__ imports in its default plugins
+            emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}`))
+          }
+          // The '!' tells Vite to use `assetId` as the built url.
+          return '!' + assetId
+        }
+        this.load = function (id) {
+          return files[id]
+        }
       }
     },
     transformIndexHtml: {
@@ -32,6 +71,7 @@ export default (): Plugin => {
 
           if (files[file] == null) {
             files[file] = ''
+            elems[file] = el
 
             const loading: Promise<void>[] = []
 
@@ -57,6 +97,8 @@ export default (): Plugin => {
 
           if (files[file] == null) {
             files[file] = ''
+            elems[file] = el
+
             files[file] = await fetchText(url)
           }
         }
@@ -83,8 +125,6 @@ function fetchText(url: string) {
 }
 
 type FileCache = { [file: string]: string }
-
-type Element = ReturnType<ReturnType<typeof cheerio.load>['root']>
 
 async function fetchAsset(url: string, files: FileCache) {
   const file = toFilePath(url)
@@ -127,3 +167,9 @@ function toFilePath(url: string) {
 
   return file
 }
+
+// Taken from: vite/src/node/plugins/css.ts
+const cssLangRE = /\.(css|less|sass|scss|styl|stylus|postcss)($|\?)/
+const directRequestRE = /(\?|&)direct\b/
+const isCSSRequest = (request: string) =>
+  cssLangRE.test(request) && !directRequestRE.test(request)
