@@ -5,62 +5,58 @@ import fetch from 'node-fetch'
 import { URL } from 'url'
 
 type Element = ReturnType<typeof cheerio>
+type ElementCache = { [id: string]: Element }
+type FileCache = { [file: string]: string }
 
 export default (): Plugin => {
-  const elems: { [id: string]: Element } = {}
+  const elems: ElementCache = {}
   const files: FileCache = {}
-  let isBuild: boolean
+  const emitCache = new Map<string, string>()
 
   return {
     name: 'vite:rehost',
+    apply: 'build',
     enforce: 'pre',
-    configResolved({ command }) {
-      isBuild = command == 'build'
-      if (isBuild) {
-        const emitCache = new Map<string, string>()
-        this.resolveId = function (id, importer) {
-          const source = files[id]
-          if (source == null) {
-            return null
-          }
-          const el = elems[id]
-          if (
-            importer?.endsWith('.html') &&
-            /**
-             * These assets are bundled by Rollup.
-             * @see /vite/src/node/plugins/html.ts
-             */
-            (el.is('script[type="module"]') ||
-              (el.is('link') && isCSSRequest(el.attr('href')!)))
-          ) {
-            return id
-          }
-          /**
-           * The remaining assets are saved to the `outDir` in
-           * their own files.
-           */
-          let assetId = emitCache.get(id)
-          if (!assetId) {
-            assetId = this.emitFile({
-              type: 'asset',
-              name: id.slice(1),
-              source,
-            })
-            // Vite replaces __VITE_ASSET__ imports in its default plugins
-            emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}`))
-          }
-          // The '!' tells Vite to use `assetId` as the built url.
-          return '!' + assetId
-        }
-        this.load = function (id) {
-          return files[id]
-        }
+    resolveId(id, importer) {
+      const source = files[id]
+      if (source == null) {
+        return null
       }
+      const el = elems[id]
+      if (
+        importer?.endsWith('.html') &&
+        /**
+         * These assets are bundled by Rollup.
+         * @see /vite/src/node/plugins/html.ts
+         */
+        (el.is('script[type="module"]') ||
+          (el.is('link') && isCSSRequest(el.attr('href')!)))
+      ) {
+        return id
+      }
+      /**
+       * The remaining assets are saved to the `outDir` in
+       * their own files.
+       */
+      let assetId = emitCache.get(id)
+      if (!assetId) {
+        assetId = this.emitFile({
+          type: 'asset',
+          name: id.slice(1),
+          source,
+        })
+        // Vite replaces __VITE_ASSET__ imports in its default plugins
+        emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}`))
+      }
+      // The '!' tells Vite to use `assetId` as the built url.
+      return '!' + assetId
+    },
+    load(id) {
+      return files[id]
     },
     transformIndexHtml: {
       enforce: 'pre',
       async transform(html) {
-        if (!isBuild) return
         const loading: Promise<void>[] = []
 
         const $ = cheerio.load(html)
@@ -123,8 +119,6 @@ function isExternalUrl(url: string) {
 function fetchText(url: string) {
   return fetch(url).then(res => res.text())
 }
-
-type FileCache = { [file: string]: string }
 
 async function fetchAsset(url: string, files: FileCache) {
   const file = toFilePath(url)
