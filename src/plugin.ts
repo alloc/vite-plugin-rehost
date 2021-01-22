@@ -116,8 +116,10 @@ function isExternalUrl(url: string) {
   return /^(https?:)?\/\//.test(url)
 }
 
+const fetched: { [url: string]: Promise<string> } = {}
+
 function fetchText(url: string) {
-  return fetch(url).then(res => res.text())
+  return fetched[url] || (fetched[url] = fetch(url).then(res => res.text()))
 }
 
 async function fetchAsset(url: string, files: FileCache) {
