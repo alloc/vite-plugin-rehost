@@ -13,7 +13,7 @@ hash in their name, so [`Cache-Control: immutable`](https://www.keycdn.com/blog/
 Within self-hosted `.css` files, any `url()` expressions that point to external URLs are also
 fetched and saved to the `outDir` to be self-hosted.
 
-**Note:** This plugin depends on [#1647](https://github.com/vitejs/vite/pull/1647)
+**Note:** This plugin depends on [#1675](https://github.com/vitejs/vite/pull/1675)
 
 &nbsp;
 
