@@ -5,11 +5,9 @@ import fetch from 'node-fetch'
 import { URL } from 'url'
 
 type Element = ReturnType<typeof cheerio>
-type ElementCache = { [id: string]: Element }
 type FileCache = { [file: string]: string }
 
 export default (): Plugin => {
-  const elems: ElementCache = {}
   const files: FileCache = {}
   const emitCache = new Map<string, string>()
 
@@ -17,27 +15,11 @@ export default (): Plugin => {
     name: 'vite:rehost',
     apply: 'build',
     enforce: 'pre',
-    resolveId(id, importer) {
+    resolveBuiltUrl(id) {
       const source = files[id]
       if (source == null) {
         return null
       }
-      const el = elems[id]
-      if (
-        importer?.endsWith('.html') &&
-        /**
-         * These assets are bundled by Rollup.
-         * @see /vite/src/node/plugins/html.ts
-         */
-        (el.is('script[type="module"]') ||
-          (el.is('link') && isCSSRequest(el.attr('href')!)))
-      ) {
-        return id
-      }
-      /**
-       * The remaining assets are saved to the `outDir` in
-       * their own files.
-       */
       let assetId = emitCache.get(id)
       if (!assetId) {
         assetId = this.emitFile({
@@ -46,11 +28,16 @@ export default (): Plugin => {
           source,
         })
         // Vite replaces __VITE_ASSET__ imports in its default plugins
-        emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}`))
+        emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}__`))
       }
-      // The '!' tells Vite to use `assetId` as the built url.
-      return '!' + assetId
+      return assetId
     },
+    resolveId(id) {
+      if (files[id]) {
+        return id
+      }
+    },
+    // Self-hosted files may be bundled.
     load(id) {
       return files[id]
     },
@@ -67,7 +54,6 @@ export default (): Plugin => {
 
           if (files[file] == null) {
             files[file] = ''
-            elems[file] = el
 
             const loading: Promise<void>[] = []
 
@@ -93,8 +79,6 @@ export default (): Plugin => {
 
           if (files[file] == null) {
             files[file] = ''
-            elems[file] = el
-
             files[file] = await fetchText(url)
           }
         }
@@ -163,9 +147,3 @@ function toFilePath(url: string) {
 
   return file
 }
-
-// Taken from: vite/src/node/plugins/css.ts
-const cssLangRE = /\.(css|less|sass|scss|styl|stylus|postcss)($|\?)/
-const directRequestRE = /(\?|&)direct\b/
-const isCSSRequest = (request: string) =>
-  cssLangRE.test(request) && !directRequestRE.test(request)
