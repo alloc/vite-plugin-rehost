@@ -127,7 +127,10 @@ function replaceCssUrls(text: string, replacer: (url: string) => string) {
     if (!match) {
       return editor.toString()
     }
-    const url = match[1]
+    let url = match[1]
+    if (/^['"]/.test(url)) {
+      url = url.slice(1, -1)
+    }
     if (isExternalUrl(url))
       editor.overwrite(
         match.index + 4,
