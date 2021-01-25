@@ -60,10 +60,7 @@ export default (): Plugin => {
 
             const parentUrl = url
             const text = await fetchText(url)
-            files[file] = replaceCssUrls(text, url => {
-              if (/^\.\.?\//.test(url)) {
-                url = relative(parentUrl, url) || url
-              }
+            files[file] = replaceCssUrls(text, parentUrl, url => {
               loading.push(fetchAsset(url, files))
               return toFilePath(url)
             })
@@ -119,7 +116,11 @@ async function fetchAsset(url: string, files: FileCache) {
   }
 }
 
-function replaceCssUrls(text: string, replacer: (url: string) => string) {
+function replaceCssUrls(
+  text: string,
+  parentUrl: string,
+  replacer: (url: string) => string
+) {
   const editor = new MagicString(text)
   const cssUrlRE = /url\(\s*('[^']+'|"[^"]+"|[^'")]+)\s*\)/g
   for (;;) {
@@ -130,6 +131,9 @@ function replaceCssUrls(text: string, replacer: (url: string) => string) {
     let url = match[1]
     if (/^['"]/.test(url)) {
       url = url.slice(1, -1)
+    }
+    if (/^\.\.?\//.test(url)) {
+      url = relative(parentUrl, url) || url
     }
     if (isExternalUrl(url))
       editor.overwrite(
