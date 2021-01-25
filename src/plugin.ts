@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite'
 import MagicString from 'magic-string'
+import relative from '@cush/relative'
 import cheerio from 'cheerio'
 import fetch from 'node-fetch'
 import { URL } from 'url'
@@ -57,8 +58,12 @@ export default (): Plugin => {
 
             const loading: Promise<void>[] = []
 
+            const parentUrl = url
             const text = await fetchText(url)
             files[file] = replaceCssUrls(text, url => {
+              if (/^\.\.?\//.test(url)) {
+                url = relative(parentUrl, url) || url
+              }
               loading.push(fetchAsset(url, files))
               return toFilePath(url)
             })

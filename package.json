@@ -18,6 +18,7 @@
     "vite": ">2.0.0-0"
   },
   "dependencies": {
+    "@cush/relative": "^0.1.0",
     "cheerio": "^1.0.0-rc.5",
     "magic-string": "^0.25.7",
     "node-fetch": "^2.6.1"
