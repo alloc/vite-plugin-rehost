@@ -6,6 +6,8 @@ import cheerio from 'cheerio'
 import fetch from 'node-fetch'
 import { URL } from 'url'
 
+const debug = require('debug')('vite-rehost')
+
 type Element = ReturnType<typeof cheerio>
 type FileCache = { [file: string]: string }
 
@@ -136,11 +138,14 @@ function replaceCssUrls(
     const prevUrl = url
     if (/^\.\.?\//.test(url)) {
       url = relative(parentUrl, url) || url
+      debug(`resolve "${prevUrl}" to "${url}"`)
     } else if (!isExternalUrl(url)) {
       url = parentUrl.slice(0, parentUrl.lastIndexOf('/') + 1) + url
+      debug(`resolve "${prevUrl}" to "${url}"`)
     }
     if (isExternalUrl(url)) {
       url = replacer(url)
+      debug(`save as "${url}"`)
       editor.overwrite(match.index + 4, match.index + match[0].length - 1, url)
     }
   }
