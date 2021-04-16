@@ -21,7 +21,8 @@
     "@cush/relative": "^0.1.0",
     "cheerio": "^1.0.0-rc.5",
     "magic-string": "^0.25.7",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "url-regex": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^14.14.20",

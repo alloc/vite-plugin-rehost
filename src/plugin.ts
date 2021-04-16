@@ -1,4 +1,5 @@
 import type { Plugin } from 'vite'
+import urlRegex from 'url-regex'
 import MagicString from 'magic-string'
 import relative from '@cush/relative'
 import cheerio from 'cheerio'
@@ -99,7 +100,7 @@ export default (): Plugin => {
 }
 
 function isExternalUrl(url: string) {
-  return /^(https?:)?\/\//.test(url)
+  return urlRegex().test(url)
 }
 
 const fetched: { [url: string]: Promise<string> } = {}
@@ -132,15 +133,16 @@ function replaceCssUrls(
     if (/^['"]/.test(url)) {
       url = url.slice(1, -1)
     }
+    const prevUrl = url
     if (/^\.\.?\//.test(url)) {
       url = relative(parentUrl, url) || url
+    } else if (!isExternalUrl(url)) {
+      url = parentUrl.slice(0, parentUrl.lastIndexOf('/') + 1) + url
     }
-    if (isExternalUrl(url))
-      editor.overwrite(
-        match.index + 4,
-        match.index + match[0].length - 1,
-        replacer(url)
-      )
+    if (isExternalUrl(url)) {
+      url = replacer(url)
+      editor.overwrite(match.index + 4, match.index + match[0].length - 1, url)
+    }
   }
 }
 
