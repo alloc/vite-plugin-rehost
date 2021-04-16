@@ -1,7 +1,7 @@
 import type { Plugin } from 'vite'
 import urlRegex from 'url-regex'
 import MagicString from 'magic-string'
-import relative from '@cush/relative'
+import { relative } from '@cush/relative'
 import cheerio from 'cheerio'
 import fetch from 'node-fetch'
 import { URL } from 'url'
