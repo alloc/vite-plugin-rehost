@@ -4,7 +4,9 @@ import MagicString from 'magic-string'
 import { relative } from '@cush/relative'
 import cheerio from 'cheerio'
 import fetch from 'node-fetch'
+import path from 'path'
 import { URL } from 'url'
+import { createHash } from 'crypto'
 
 const debug = require('debug')('vite-rehost')
 
@@ -19,22 +21,24 @@ export default (): Plugin => {
     name: 'vite:rehost',
     apply: 'build',
     enforce: 'pre',
-    resolveBuiltUrl(id) {
-      const source = files[id]
-      if (source == null) {
-        return null
+    configResolved({ build: { assetsDir } }) {
+      this.resolveBuiltUrl = function (id) {
+        const source = files[id]
+        if (source == null) {
+          return null
+        }
+        let assetId = emitCache.get(id)
+        if (!assetId) {
+          assetId = this.emitFile({
+            type: 'asset',
+            fileName: getFileName(id.slice(1), getAssetHash(source), assetsDir),
+            source,
+          })
+          // Vite replaces __VITE_ASSET__ imports in its default plugins
+          emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}__`))
+        }
+        return assetId
       }
-      let assetId = emitCache.get(id)
-      if (!assetId) {
-        assetId = this.emitFile({
-          type: 'asset',
-          name: id.slice(1),
-          source,
-        })
-        // Vite replaces __VITE_ASSET__ imports in its default plugins
-        emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}__`))
-      }
-      return assetId
     },
     resolveId(id) {
       if (files[id]) {
@@ -165,4 +169,16 @@ function toFilePath(url: string) {
   }
 
   return file
+}
+
+function getFileName(file: string, contentHash: string, assetsDir: string) {
+  const ext = path.extname(file)
+  return path.posix.join(
+    assetsDir,
+    `${file.slice(0, -ext.length)}.${contentHash}${ext}`
+  )
+}
+
+function getAssetHash(content: string) {
+  return createHash('sha256').update(content).digest('hex').slice(0, 8)
 }
