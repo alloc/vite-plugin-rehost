@@ -165,7 +165,7 @@ function toFilePath(url: string) {
     const [family] = searchParams.get('family')!.split(':')
     file += `${host}/${family}.css`
   } else {
-    file += host + pathname
+    file += host + decodeURIComponent(pathname)
   }
 
   return file
