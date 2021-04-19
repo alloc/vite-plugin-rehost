@@ -11,7 +11,7 @@ import { createHash } from 'crypto'
 const debug = require('debug')('vite-rehost')
 
 type Element = ReturnType<typeof cheerio>
-type FileCache = { [file: string]: string }
+type FileCache = { [file: string]: string | Buffer }
 
 export default (): Plugin => {
   const files: FileCache = {}
@@ -47,7 +47,7 @@ export default (): Plugin => {
     },
     // Self-hosted files may be bundled.
     load(id) {
-      return files[id]
+      return files[id] + ''
     },
     transformIndexHtml: {
       enforce: 'pre',
@@ -109,17 +109,25 @@ function isExternalUrl(url: string) {
   return urlRegex().test(url)
 }
 
-const fetched: { [url: string]: Promise<string> } = {}
+const textCache: { [url: string]: Promise<string> } = {}
+const bufferCache: { [url: string]: Promise<Buffer> } = {}
 
 function fetchText(url: string) {
-  return fetched[url] || (fetched[url] = fetch(url).then(res => res.text()))
+  return textCache[url] || (textCache[url] = fetch(url).then(res => res.text()))
+}
+
+function fetchBuffer(url: string) {
+  return (
+    bufferCache[url] ||
+    (bufferCache[url] = fetch(url).then(res => res.buffer()))
+  )
 }
 
 async function fetchAsset(url: string, files: FileCache) {
   const file = toFilePath(url)
   if (files[file] == null) {
     files[file] = ''
-    files[file] = await fetchText(url)
+    files[file] = await fetchBuffer(url)
   }
 }
 
@@ -179,6 +187,6 @@ function getFileName(file: string, contentHash: string, assetsDir: string) {
   )
 }
 
-function getAssetHash(content: string) {
+function getAssetHash(content: string | Buffer) {
   return createHash('sha256').update(content).digest('hex').slice(0, 8)
 }
