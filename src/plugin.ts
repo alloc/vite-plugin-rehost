@@ -158,7 +158,11 @@ function replaceCssUrls(
     if (isExternalUrl(url)) {
       url = replacer(url)
       debug(`save as "${url}"`)
-      editor.overwrite(match.index + 4, match.index + match[0].length - 1, url)
+      editor.overwrite(
+        match.index + 4,
+        match.index + match[0].length - 1,
+        JSON.stringify(url)
+      )
     }
   }
 }
