@@ -47,7 +47,7 @@ export default (): Plugin => {
     },
     // Self-hosted files may be bundled.
     load(id) {
-      return files[id] + ''
+      return files[id]?.toString()
     },
     transformIndexHtml: {
       enforce: 'pre',
