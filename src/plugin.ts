@@ -52,49 +52,20 @@ export default (): Plugin => {
     transformIndexHtml: {
       enforce: 'pre',
       async transform(html) {
+        const $ = cheerio.load(html)
         const loading: Promise<void>[] = []
 
-        const $ = cheerio.load(html)
-
-        async function fetchStyles(url: string, el: Element) {
-          const file = toFilePath(url)
-          el.attr('href', file)
-
-          if (files[file] == null) {
-            files[file] = ''
-
-            const loading: Promise<void>[] = []
-
-            const parentUrl = url
-            const text = await fetchText(url)
-            files[file] = replaceCssUrls(text, parentUrl, url => {
-              loading.push(fetchAsset(url, files))
-              return toFilePath(url)
-            })
-
-            await Promise.all(loading)
-          }
-        }
         $('link[rel="stylesheet"]').each((_i, el) => {
           const url = $(el).attr('href')
           if (url && isExternalUrl(url)) {
-            loading.push(fetchStyles(url, $(el)))
+            loading.push(fetchStyles(url, $(el), files))
           }
         })
 
-        async function fetchScript(url: string, el: Element) {
-          const file = toFilePath(url)
-          el.attr('src', file)
-
-          if (files[file] == null) {
-            files[file] = ''
-            files[file] = await fetchText(url)
-          }
-        }
         $('script[src]').each((_i, el) => {
           const url = $(el).attr('src')
           if (url && isExternalUrl(url)) {
-            loading.push(fetchScript(url, $(el)))
+            loading.push(fetchScript(url, $(el), files))
           }
         })
 
@@ -102,6 +73,36 @@ export default (): Plugin => {
         return $.html()
       },
     },
+  }
+}
+
+async function fetchStyles(url: string, el: Element, files: FileCache) {
+  const file = toFilePath(url)
+  el.attr('href', file)
+
+  if (files[file] == null) {
+    files[file] = ''
+
+    const loading: Promise<void>[] = []
+
+    const parentUrl = url
+    const text = await fetchText(url)
+    files[file] = replaceCssUrls(text, parentUrl, url => {
+      loading.push(fetchAsset(url, files))
+      return toFilePath(url)
+    })
+
+    await Promise.all(loading)
+  }
+}
+
+async function fetchScript(url: string, el: Element, files: FileCache) {
+  const file = toFilePath(url)
+  el.attr('src', file)
+
+  if (files[file] == null) {
+    files[file] = ''
+    files[file] = await fetchText(url)
   }
 }
 
