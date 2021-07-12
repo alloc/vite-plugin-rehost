@@ -5,6 +5,7 @@ import { relative } from '@cush/relative'
 import cheerio from 'cheerio'
 import fetch from 'node-fetch'
 import path from 'path'
+import fs from 'fs'
 import { URL } from 'url'
 import { createHash } from 'crypto'
 
@@ -21,7 +22,9 @@ export default (): Plugin => {
     name: 'vite:rehost',
     apply: 'build',
     enforce: 'pre',
-    configResolved({ build: { assetsDir } }) {
+    configResolved({ root, base, build: { assetsDir, outDir } }) {
+      let useEmitFile = true
+
       this.resolveBuiltUrl = function (id) {
         const source = files[id]
         if (source == null) {
@@ -29,15 +32,47 @@ export default (): Plugin => {
         }
         let assetId = emitCache.get(id)
         if (!assetId) {
+          const fileName = getFileName(
+            id.slice(1),
+            getAssetHash(source),
+            assetsDir
+          )
+          if (!useEmitFile) {
+            emitCache.set(id, path.resolve(root, outDir, fileName))
+            return base + fileName
+          }
           assetId = this.emitFile({
             type: 'asset',
-            fileName: getFileName(id.slice(1), getAssetHash(source), assetsDir),
+            fileName,
             source,
           })
           // Vite replaces __VITE_ASSET__ imports in its default plugins
           emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}__`))
         }
         return assetId
+      }
+
+      this.writeBundle = () => {
+        // No files have been emitted yet? That means we need
+        // to write files manually in the `closeBundle` phase.
+        if (!emitCache.size) {
+          useEmitFile = false
+        }
+      }
+
+      this.closeBundle = async function () {
+        if (!useEmitFile)
+          for (const [id, source] of Object.entries(files)) {
+            const filePath = emitCache.get(id)
+            if (filePath) {
+              fs.mkdirSync(path.dirname(filePath), { recursive: true })
+              fs.writeFileSync(filePath, source)
+            }
+          }
+
+        // Clear the emit cache so `emitFile` is called
+        // again on rebuilds (in watch mode).
+        emitCache.clear()
       }
     },
     resolveId(id) {
