@@ -1,5 +1,7 @@
+import chalk from 'chalk'
 import cheerio from 'cheerio'
 import MagicString from 'magic-string'
+import { startTask } from 'misty/task'
 import fetch, { Response } from 'node-fetch'
 import { URL } from 'url'
 import urlRegex from 'url-regex'
@@ -90,7 +92,15 @@ export class AsyncFileCache {
     return this.fetch(url).then(res => res.buffer())
   }
   private fetch(url: string) {
-    return this.requests[url] || (this.requests[url] = fetch(url))
+    let request = this.requests[url]
+    if (request) {
+      return request
+    }
+    const task = startTask('Downloading ' + chalk.yellowBright(url))
+    request = this.requests[url] = fetch(url)
+    return request.finally(() => {
+      task.finish()
+    })
   }
 }
 
