@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import { createHash } from 'crypto'
 import { AsyncFileCache } from './AsyncFileCache'
+import { debug } from './debug'
 
 export default (): Plugin => {
   let base: string
@@ -98,8 +99,11 @@ export default (): Plugin => {
         for (const [id, source] of loadedFiles) {
           const filePath = emitCache.get(id)
           if (filePath) {
+            debug('writing file:', filePath)
             fs.mkdirSync(path.dirname(filePath), { recursive: true })
             fs.writeFileSync(filePath, source)
+          } else {
+            debug('skipping file:', id)
           }
         }
       }

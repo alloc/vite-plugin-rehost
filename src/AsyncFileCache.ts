@@ -6,13 +6,12 @@ import fetch, { Response } from 'node-fetch'
 import { URL } from 'url'
 import urlRegex from 'url-regex'
 import { relative } from '@cush/relative'
+import { debug } from './debug'
 
 type Element = ReturnType<typeof cheerio>
 type FileCache = { [id: string]: FilePromise }
 type FilePromise = Promise<string | Buffer>
 type FileLoader = () => FilePromise
-
-const debug = require('debug')('vite-rehost')
 
 export class AsyncFileCache {
   private files: FileCache = {}
