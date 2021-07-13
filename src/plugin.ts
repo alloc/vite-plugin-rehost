@@ -90,19 +90,19 @@ export default (): Plugin => {
       }
     },
     async closeBundle() {
-      if (!useEmitFile)
-        for (const [id, source] of await files.entries()) {
+      if (useEmitFile) {
+        // Ensure `emitFile` is called on rebuilds.
+        emitCache.clear()
+      } else {
+        const loadedFiles = await files.entries()
+        for (const [id, source] of loadedFiles) {
           const filePath = emitCache.get(id)
           if (filePath) {
             fs.mkdirSync(path.dirname(filePath), { recursive: true })
             fs.writeFileSync(filePath, source)
           }
         }
-
-      // Clear the emit cache so `emitFile` is called
-      // again on rebuilds (in watch mode).
-      emitCache.clear()
-      useEmitFile = true
+      }
     },
   }
 }
