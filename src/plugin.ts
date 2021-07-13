@@ -62,26 +62,25 @@ export default (): Plugin => {
       if (source == null) {
         return null
       }
-      let assetId = emitCache.get(id)
-      if (!assetId) {
-        const fileName = getFileName(
-          id.slice(1),
-          getAssetHash(source),
-          assetsDir
-        )
-        if (!useEmitFile) {
-          emitCache.set(id, path.resolve(outDir, fileName))
-          return base + fileName
+      if (useEmitFile) {
+        const assetId = emitCache.get(id)
+        if (assetId) {
+          return assetId
         }
-        assetId = this.emitFile({
+      }
+      const fileName = getFileName(id.slice(1), getAssetHash(source), assetsDir)
+      if (useEmitFile) {
+        let assetId = this.emitFile({
           type: 'asset',
           fileName,
           source,
         })
         // Vite replaces __VITE_ASSET__ imports in its default plugins
         emitCache.set(id, (assetId = `__VITE_ASSET__${assetId}__`))
+        return assetId
       }
-      return assetId
+      emitCache.set(id, path.resolve(outDir, fileName))
+      return base + fileName
     },
     writeBundle: () => {
       // No files have been emitted yet? That means we need
