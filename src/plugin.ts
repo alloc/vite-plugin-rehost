@@ -86,7 +86,26 @@ export default (): Plugin => {
       emitCache.set(id, path.resolve(outDir, fileName))
       return base + fileName
     },
-    writeBundle: () => {
+    async generateBundle() {
+      if (useEmitFile)
+        await Promise.all(
+          files.unusedAssets.map(async id => {
+            const source = await files.get(id)
+            const fileName = getFileName(
+              id.slice(1),
+              getAssetHash(source),
+              assetsDir
+            )
+            debug(`emitting file: ${fileName}`)
+            this.emitFile({
+              type: 'asset',
+              fileName,
+              source,
+            })
+          })
+        )
+    },
+    writeBundle() {
       // No files have been emitted yet? That means we need
       // to write files manually in the `closeBundle` phase.
       if (!emitCache.size) {
