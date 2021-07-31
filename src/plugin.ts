@@ -40,7 +40,10 @@ export default (): Plugin => {
     // Self-hosted files may be bundled.
     async load(id) {
       const source = await files.get(id)
-      return source?.toString()
+      if (source) {
+        debug(`bundling file: ${id}`)
+        return source.toString()
+      }
     },
     transformIndexHtml: {
       enforce: 'pre',
@@ -70,6 +73,7 @@ export default (): Plugin => {
       }
       const fileName = getFileName(id.slice(1), getAssetHash(source), assetsDir)
       if (useEmitFile) {
+        debug(`emitting file: ${fileName}`)
         let assetId = this.emitFile({
           type: 'asset',
           fileName,

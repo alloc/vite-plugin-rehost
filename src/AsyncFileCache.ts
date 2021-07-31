@@ -29,6 +29,7 @@ export class AsyncFileCache {
     if (!file) {
       const loadFile = this.loaders[id]
       if (loadFile) {
+        debug(`loading file: ${id}`)
         this.set(id, (file = loadFile()))
         delete this.loaders[id]
       }
@@ -51,19 +52,25 @@ export class AsyncFileCache {
       )
     )
   }
+  /** File paths for assets that were never accessed with `.get` */
+  get unusedAssets() {
+    return Object.keys(this.loaders).filter(id => !this.files[id])
+  }
   fetchStyles(cssRef: Element) {
     const cssUrl = cssRef.attr('href')
     if (cssUrl && isExternalUrl(cssUrl)) {
       const file = toFilePath(cssUrl)
       cssRef.attr('href', file)
 
-      if (!this.files[file])
-        this.loaders[file] ??= () =>
+      if (!this.has(file)) {
+        debug(`found stylesheet: ${cssUrl}`)
+        this.loaders[file] = () =>
           this.fetchText(cssUrl).then(cssText =>
             replaceCssUrls(cssText, cssUrl, url => {
               return this.fetchAsset(url)
             })
           )
+      }
     }
   }
   fetchScript(scriptRef: Element) {
@@ -72,15 +79,17 @@ export class AsyncFileCache {
       const file = toFilePath(scriptUrl)
       scriptRef.attr('src', file)
 
-      if (!this.files[file]) {
-        this.loaders[file] ??= () => this.fetchText(scriptUrl)
+      if (!this.has(file)) {
+        debug(`found script: ${scriptUrl}`)
+        this.loaders[file] = () => this.fetchText(scriptUrl)
       }
     }
   }
   fetchAsset(assetUrl: string) {
     const file = toFilePath(assetUrl)
-    if (!this.files[file]) {
-      this.loaders[file] ??= () => this.fetchBuffer(assetUrl)
+    if (!this.has(file)) {
+      debug(`found asset: ${assetUrl}`)
+      this.loaders[file] = () => this.fetchBuffer(assetUrl)
     }
     return this.toPublicUrl(file)
   }
@@ -152,7 +161,6 @@ async function replaceCssUrls(
     if (isExternalUrl(url))
       loading.push(
         Promise.resolve(replacer(url)).then(url => {
-          debug(`save as "${url}"`)
           editor.overwrite(
             match.index + 4,
             match.index + match[0].length - 1,

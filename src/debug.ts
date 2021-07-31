@@ -1,3 +1,3 @@
 import create from 'debug'
 
-export const debug = create('vite-rehost')
+export const debug = create('vite:plugin-rehost')
