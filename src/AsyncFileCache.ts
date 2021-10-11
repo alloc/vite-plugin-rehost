@@ -105,7 +105,16 @@ export class AsyncFileCache {
       return request
     }
     const task = startTask('Downloading ' + chalk.yellowBright(url))
-    request = this.requests[url] = fetch(url)
+    const download = (): Promise<Response> =>
+      fetch(url).catch(err => {
+        // Connection may reset when debugging.
+        if (err.code == 'ECONNRESET') {
+          return download()
+        }
+        throw err
+      })
+
+    request = this.requests[url] = download()
     return request.finally(() => {
       task.finish()
     })
