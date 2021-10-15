@@ -106,7 +106,17 @@ export class AsyncFileCache {
     }
     const task = startTask('Downloading ' + chalk.yellowBright(url))
     const download = (): Promise<Response> =>
-      fetch(url).catch(err => {
+      fetch(url, {
+        headers: {
+          // An explicit user agent ensures the most modern asset is cached.
+          // In the future, we may want to send a duplicate request with an
+          // antiquated user agent, so backwards compatibility is preserved.
+          // This workaround is mostly relevant to Google Fonts, where "ttf"
+          // fonts are served to browsers where "woff2" is not supported.
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:93.0) Gecko/20100101 Firefox/93.0',
+        },
+      }).catch(err => {
         // Connection may reset when debugging.
         if (err.code == 'ECONNRESET') {
           return download()
